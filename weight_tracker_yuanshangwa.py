@@ -228,4 +228,5 @@ if len(df) > 0:
         columns=["姓名", "初始体重(斤)", "当前体重(斤)", "减重(斤)"]
     )
     rank_df = rank_df.sort_values("减重(斤)", ascending=False).reset_index(drop=True)
+
     st.dataframe(rank_df, hide_index=True, use_container_width=True)
