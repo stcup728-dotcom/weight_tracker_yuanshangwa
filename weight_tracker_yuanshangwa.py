@@ -1,33 +1,13 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
-import matplotlib.font_manager as fm
 from datetime import datetime
 import os
-import urllib.request
 
 # ----------------------
-# 配置 matplotlib 显示中文（自动下载字体）
+# 配置 matplotlib 显示中文（使用系统字体）
 # ----------------------
-FONT_PATH = "SimHei.ttf"
-FONT_URL = "https://raw.githubusercontent.com/stcup728-dotcom/weight_tracker_yuanshangwa/main/SimHei.ttf"  # 请确认用户名/仓库名是否正确
-
-# 如果字体文件不存在，则从 GitHub 下载
-if not os.path.exists(FONT_PATH):
-    try:
-        with st.spinner("正在下载中文字体，首次运行需几秒钟..."):
-            urllib.request.urlretrieve(FONT_URL, FONT_PATH)
-        st.success("✅ 字体下载成功，中文将正常显示")
-    except Exception as e:
-        st.warning("⚠️ 字体下载失败，中文可能显示为方框")
-
-# 将字体添加到 matplotlib 字体库
-if os.path.exists(FONT_PATH):
-    fm.fontManager.addfont(FONT_PATH)
-    plt.rcParams['font.family'] = fm.FontProperties(fname=FONT_PATH).get_name()
-else:
-    # 备选方案：尝试常见 Linux 中文字体
-    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'WenQuanYi Zen Hei', 'SimHei']
+plt.rcParams['font.sans-serif'] = ['WenQuanYi Zen Hei', 'Noto Sans CJK SC', 'SimHei', 'DejaVu Sans']
 plt.rcParams['axes.unicode_minus'] = False
 
 # ----------------------
