@@ -72,7 +72,7 @@ with col1:
     name = st.text_input("姓名")
 
 with col2:
-    height_cm = st.number_input("身高（厘米）", 165, 190, step=0.1)
+    height_cm = st.number_input("身高（厘米）", 165.0, 190.0, step=0.1)
 
 with col3:
     weight_jin = st.number_input("体重（斤）", 120.0, 250.0, step=0.1)
@@ -281,4 +281,5 @@ if len(df) > 0:
 
 
     st.dataframe(rank, use_container_width=True, hide_index=True)
+
 
