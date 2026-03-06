@@ -5,33 +5,26 @@ from datetime import datetime, timezone, timedelta
 import os
 
 # ----------------------
-# 页面全局样式（黑色文字 + 大字体）
+# 页面样式
 # ----------------------
 st.markdown(
     """
     <style>
-    /* 所有标题和文本强制黑色 */
-    .stApp h1, .stApp h2, .stApp h3, .stApp .stTextInput label, .stApp .stNumberInput label,
-    .stApp .stDataFrame td, .stApp .stDataFrame th {
+    .stApp h1, .stApp h2, .stApp h3, .stApp label {
         color: black !important;
     }
-    /* 表格字体大小 */
-    .stApp [data-testid="stDataFrame"] table {
-        font-size: 16px !important;
-    }
-    /* 输入框标签字体 */
-    .stApp .stTextInput label, .stApp .stNumberInput label {
-        font-size: 16px !important;
-        font-weight: 500;
-    }
-    /* 按钮文字 */
-    .stApp button {
-        font-size: 16px !important;
-        color: black !important;
-    }
-    /* 全局背景保持白色（可选） */
+
     .stApp {
         background-color: white;
+    }
+
+    .stDataFrame table {
+        font-size:16px;
+    }
+
+    button {
+        font-size:16px !important;
+        color:black !important;
     }
     </style>
     """,
@@ -44,195 +37,259 @@ st.markdown(
 DATA_FILE = "weight_data.csv"
 
 # ----------------------
-# 私人名单（只有名单内的人可以打卡）
+# 允许打卡名单
 # ----------------------
-ALLOWED_NAMES = ["宋涛", "郭庆", "张博", "宋乐"]
+ALLOWED_NAMES = ["宋涛","郭庆","张博","宋乐"]
 
 # ----------------------
-# 页面标题（居中）
+# 页面标题
 # ----------------------
-st.markdown("<h1 style='text-align: center; color: black;'>🏋️ 塬上娃减肥打卡系统</h1>", unsafe_allow_html=True)
+st.markdown("<h1 style='text-align:center;'>🏋️ 塬上娃减肥打卡系统</h1>", unsafe_allow_html=True)
 
 # ----------------------
-# 初始化数据文件（如果不存在则创建）
+# 初始化数据
 # ----------------------
 if not os.path.exists(DATA_FILE):
-    df = pd.DataFrame(columns=["name", "date", "weight_jin", "height_cm"])
-    df.to_csv(DATA_FILE, index=False)
 
-# 读取数据
+    df = pd.DataFrame(columns=[
+        "name","date","weight_jin","height_cm","goal_weight"
+    ])
+
+    df.to_csv(DATA_FILE,index=False)
+
 df = pd.read_csv(DATA_FILE)
 
 # =====================
-# 兼容旧数据文件：将旧列名转换为新列名
+# 今日打卡
 # =====================
-if 'weight' in df.columns and 'weight_jin' not in df.columns:
-    df.rename(columns={'weight': 'weight_jin'}, inplace=True)
-if 'height' in df.columns and 'height_cm' not in df.columns:
-    df.rename(columns={'height': 'height_cm'}, inplace=True)
 
-# =====================
-# 数据清洗：确保每人每天只有一条最新记录
-# =====================
-if not df.empty:
-    df = df.sort_index()
-    df = df.groupby(['name', 'date'], as_index=False).last()
-    df.to_csv(DATA_FILE, index=False)
+st.markdown("<h2 style='text-align:center;'>今日打卡</h2>", unsafe_allow_html=True)
 
-# =====================
-# 今日打卡区
-# =====================
-st.markdown("<h2 style='text-align: center; color: black;'>今日打卡</h2>", unsafe_allow_html=True)
+col1,col2,col3,col4 = st.columns(4)
 
-col1, col2, col3 = st.columns(3)
 with col1:
     name = st.text_input("姓名")
+
 with col2:
-    height_cm = st.number_input("身高（厘米）", min_value=140, max_value=220, step=1)
+    height_cm = st.number_input("身高（厘米）",140,220)
+
 with col3:
-    weight_jin = st.number_input("体重（斤）", min_value=30.0, max_value=400.0, step=0.1)
+    weight_jin = st.number_input("体重（斤）",30.0,400.0,step=0.1)
 
-col_btn = st.columns([1, 2, 1])[1]
-with col_btn:
-    submitted = st.button("提交", use_container_width=True)
+with col4:
+    goal_weight = st.number_input("目标体重（斤）",30.0,300.0,step=0.1)
 
-if submitted:
+submit = st.button("提交")
+
+if submit:
+
     if name not in ALLOWED_NAMES:
-        st.error("❌ 你不在允许名单中，无法提交记录！")
-    elif name == "" or height_cm <= 0:
-        st.error("❌ 请填写有效姓名和身高！")
+
+        st.error("❌ 你不在允许名单中")
+
     else:
+
         beijing_tz = timezone(timedelta(hours=8))
-        now_beijing = datetime.now(beijing_tz)
-        date_str = now_beijing.strftime("%Y-%m-%d")
+
+        now = datetime.now(beijing_tz)
+
+        today = now.strftime("%Y-%m-%d")
 
         df = pd.read_csv(DATA_FILE)
-        df = df[~((df['name'] == name) & (df['date'] == date_str))]
 
-        new_data = pd.DataFrame({
-            "name": [name],
-            "date": [date_str],
-            "weight_jin": [weight_jin],
-            "height_cm": [height_cm]
+        df = df[~((df["name"]==name) & (df["date"]==today))]
+
+        new = pd.DataFrame({
+
+            "name":[name],
+            "date":[today],
+            "weight_jin":[weight_jin],
+            "height_cm":[height_cm],
+            "goal_weight":[goal_weight]
+
         })
-        df = pd.concat([df, new_data], ignore_index=True)
-        df.to_csv(DATA_FILE, index=False)
-        st.success("✅ 记录成功！")
+
+        df = pd.concat([df,new],ignore_index=True)
+
+        df.to_csv(DATA_FILE,index=False)
+
+        st.success("✅ 打卡成功")
 
 df = pd.read_csv(DATA_FILE)
 
 # =====================
-# BMI体质指数分析
+# BMI分析
 # =====================
-st.markdown("<h2 style='text-align: center; color: black;'>BMI体质指数分析</h2>", unsafe_allow_html=True)
 
-if len(df) > 0:
-    latest = df.sort_values("date").groupby("name").tail(1).copy()
-    latest["weight_kg"] = latest["weight_jin"] / 2
-    latest["height_m"] = latest["height_cm"] / 100
-    latest["BMI"] = latest["weight_kg"] / (latest["height_m"] ** 2)
+st.markdown("<h2 style='text-align:center;'>BMI体质指数分析</h2>", unsafe_allow_html=True)
 
-    def bmi_status(bmi):
-        if bmi < 18.5:
+if len(df)>0:
+
+    latest = df.sort_values("date").groupby("name").tail(1)
+
+    latest["weight_kg"] = latest["weight_jin"]/2
+
+    latest["height_m"] = latest["height_cm"]/100
+
+    latest["BMI"] = latest["weight_kg"]/(latest["height_m"]**2)
+
+    def bmi_status(b):
+
+        if b<18.5:
             return "偏瘦"
-        elif bmi < 23:
+
+        elif b<23:
             return "正常"
-        elif bmi < 25:
+
+        elif b<25:
             return "超重"
+
         else:
             return "肥胖"
 
     latest["状态"] = latest["BMI"].apply(bmi_status)
 
-    display_df = latest[["name", "weight_jin", "height_cm", "BMI", "状态"]].copy()
-    display_df.columns = ["姓名", "体重(斤)", "身高(厘米)", "BMI体质指数", "状态"]
-    st.dataframe(display_df, hide_index=True, use_container_width=True)
+    latest["距离目标(斤)"] = latest["weight_jin"]-latest["goal_weight"]
+
+    show = latest[[
+        "name","weight_jin","height_cm","BMI","状态","goal_weight","距离目标(斤)"
+    ]]
+
+    show.columns = [
+        "姓名","体重(斤)","身高(cm)","BMI","状态","目标体重","距离目标"
+    ]
+
+    st.dataframe(show,use_container_width=True,hide_index=True)
 
 # =====================
-# 体重变化曲线（使用 Plotly，优化颜色和字体）
+# 体重变化曲线
 # =====================
-st.markdown("<h2 style='text-align: center; color: black;'>体重变化曲线</h2>", unsafe_allow_html=True)
 
-if len(df) > 0:
+st.markdown("<h2 style='text-align:center;'>体重变化曲线</h2>", unsafe_allow_html=True)
+
+if len(df)>0:
+
     df["date"] = pd.to_datetime(df["date"])
-    
-    # ===== 关键修复：过滤掉姓名为空的数据，避免 undefined 图例 =====
-    df = df[df['name'].notna() & (df['name'] != '')].copy()
-    
-    if len(df) == 0:
-        st.info("暂无有效数据")
-    else:
-        # 绘制折线图，不再设置 "name" 标签以避免 undefined
-        fig = px.line(
-            df,
-            x="date",
-            y="weight_jin",
-            color="name",
-            markers=True,
-            title=None,
-            labels={"date": "日期", "weight_jin": "体重 (斤)"}
-        )
 
-        # 自定义悬停模板
-        fig.update_traces(
-            hovertemplate="<b>%{fullData.name}</b><br>日期: %{x|%Y-%m-%d}<br>体重: %{y:.1f} 斤<extra></extra>"
-        )
+    fig = px.line(
 
-        # 全局字体设置（黑色 + 大小）
-        fig.update_layout(
-            font=dict(
-                family="Arial, sans-serif",
-                size=14,
-                color="black"
-            ),
-            xaxis=dict(
-                title="日期",
-                titlefont=dict(size=16, color="black"),
-                tickfont=dict(size=14, color="black"),
-                rangeslider=dict(visible=True),
-                type="date",
-                tickformat="%Y-%m-%d"
-            ),
-            yaxis=dict(
-                title="体重 (斤)",
-                titlefont=dict(size=16, color="black"),
-                tickfont=dict(size=14, color="black")
-            ),
-            hovermode="x unified",
-            legend=dict(
-                orientation="h",
-                yanchor="bottom",
-                y=1.02,
-                xanchor="center",
-                x=0.5,
-                font=dict(size=14, color="black"),
-                title_text=""  # 强制图例标题为空
-            ),
-            title_x=0.5,
-            plot_bgcolor="white",
-            paper_bgcolor="white"
-        )
+        df,
+        x="date",
+        y="weight_jin",
+        color="name",
+        markers=True,
 
-        st.plotly_chart(fig, use_container_width=True)
+        labels={
+            "date":"日期",
+            "weight_jin":"体重(斤)",
+            "name":"姓名"
+        }
+
+    )
+
+    fig.update_traces(
+
+        hovertemplate="<b>%{fullData.name}</b><br>日期:%{x|%Y-%m-%d}<br>体重:%{y}斤<extra></extra>"
+
+    )
+
+    fig.update_layout(
+
+        legend_title_text="",
+
+        xaxis=dict(
+            title="日期",
+            tickformat="%Y-%m-%d",
+            rangeslider=dict(visible=True)
+        ),
+
+        yaxis=dict(
+            title="体重(斤)"
+        ),
+
+        hovermode="x unified",
+
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
+
+    st.plotly_chart(fig,use_container_width=True)
+
+# =====================
+# 最近7天趋势
+# =====================
+
+st.markdown("<h2 style='text-align:center;'>最近7天体重趋势</h2>", unsafe_allow_html=True)
+
+if len(df)>0:
+
+    last = df.copy()
+
+    last["date"] = pd.to_datetime(last["date"])
+
+    end = last["date"].max()
+
+    start = end - pd.Timedelta(days=7)
+
+    last = last[last["date"]>=start]
+
+    fig2 = px.line(
+
+        last,
+        x="date",
+        y="weight_jin",
+        color="name",
+        markers=True,
+
+        labels={
+            "date":"日期",
+            "weight_jin":"体重(斤)",
+            "name":"姓名"
+        }
+
+    )
+
+    fig2.update_layout(
+
+        legend_title_text="",
+
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
+
+    st.plotly_chart(fig2,use_container_width=True)
 
 # =====================
 # 减重排行榜
 # =====================
-st.markdown("<h2 style='text-align: center; color: black;'>🏆 减重排行榜</h2>", unsafe_allow_html=True)
 
-if len(df) > 0:
-    result = []
-    for person in df["name"].unique():
-        person_data = df[df["name"] == person].sort_values("date")
-        if len(person_data) >= 1:
-            start = person_data.iloc[0]["weight_jin"]
-            latest_weight = person_data.iloc[-1]["weight_jin"]
-            loss = start - latest_weight
-            result.append([person, start, latest_weight, loss])
+st.markdown("<h2 style='text-align:center;'>🏆 减重排行榜</h2>", unsafe_allow_html=True)
 
-    rank_df = pd.DataFrame(
+if len(df)>0:
+
+    result=[]
+
+    for p in df["name"].unique():
+
+        d=df[df["name"]==p].sort_values("date")
+
+        start=d.iloc[0]["weight_jin"]
+
+        now=d.iloc[-1]["weight_jin"]
+
+        loss=start-now
+
+        result.append([p,start,now,loss])
+
+    rank=pd.DataFrame(
+
         result,
-        columns=["姓名", "初始体重(斤)", "当前体重(斤)", "减重(斤)"]
+        columns=["姓名","初始体重","当前体重","减重"]
+
     )
-    rank_df = rank_df.sort_values("减重(斤)", ascending=False).reset_index(drop=True)
-    st.dataframe(rank_df, hide_index=True, use_container_width=True)
+
+    rank["减重率(%)"]=(rank["减重"]/rank["初始体重"]*100).round(2)
+
+    rank=rank.sort_values("减重率(%)",ascending=False).reset_index(drop=True)
+
+    st.dataframe(rank,use_container_width=True,hide_index=True)
