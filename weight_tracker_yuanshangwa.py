@@ -1,13 +1,33 @@
 import streamlit as st
 import pandas as pd
 import matplotlib.pyplot as plt
+import matplotlib.font_manager as fm
 from datetime import datetime
 import os
+import urllib.request
 
 # ----------------------
-# 配置 matplotlib 显示中文
+# 配置 matplotlib 显示中文（自动下载字体）
 # ----------------------
-plt.rcParams['font.sans-serif'] = ['SimHei']
+FONT_PATH = "SimHei.ttf"
+FONT_URL = "https://raw.githubusercontent.com/stcup728-dotcom/weight_tracker_yuanshangwa/main/SimHei.ttf"  # 请确认用户名/仓库名是否正确
+
+# 如果字体文件不存在，则从 GitHub 下载
+if not os.path.exists(FONT_PATH):
+    try:
+        with st.spinner("正在下载中文字体，首次运行需几秒钟..."):
+            urllib.request.urlretrieve(FONT_URL, FONT_PATH)
+        st.success("✅ 字体下载成功，中文将正常显示")
+    except Exception as e:
+        st.warning("⚠️ 字体下载失败，中文可能显示为方框")
+
+# 将字体添加到 matplotlib 字体库
+if os.path.exists(FONT_PATH):
+    fm.fontManager.addfont(FONT_PATH)
+    plt.rcParams['font.family'] = fm.FontProperties(fname=FONT_PATH).get_name()
+else:
+    # 备选方案：尝试常见 Linux 中文字体
+    plt.rcParams['font.sans-serif'] = ['Noto Sans CJK SC', 'WenQuanYi Zen Hei', 'SimHei']
 plt.rcParams['axes.unicode_minus'] = False
 
 # ----------------------
@@ -18,7 +38,7 @@ DATA_FILE = "weight_data.csv"
 # ----------------------
 # 私人名单（只有名单内的人可以打卡）
 # ----------------------
-ALLOWED_NAMES = ["宋涛", "郭庆", "张博", "宋乐"]  # 把群里兄弟名字加进去
+ALLOWED_NAMES = ["宋涛", "郭庆", "张博", "宋乐"]
 
 # ----------------------
 # 页面标题
@@ -40,9 +60,7 @@ df = pd.read_csv(DATA_FILE)
 st.header("今日打卡")
 
 name = st.text_input("姓名")
-
 height = st.number_input("身高(cm)", min_value=140, max_value=220)
-
 weight = st.number_input("体重(kg)", min_value=30.0, max_value=200.0)
 
 if st.button("提交"):
@@ -73,7 +91,6 @@ if len(df) > 0:
     latest = df.sort_values("date").groupby("name").tail(1)
     latest["BMI"] = latest["weight"] / ((latest["height"]/100)**2)
 
-    # BMI健康状态（亚洲男性标准）
     def bmi_status(bmi):
         if bmi < 18.5:
             return "偏瘦"
@@ -85,7 +102,6 @@ if len(df) > 0:
             return "肥胖"
 
     latest["状态"] = latest["BMI"].apply(bmi_status)
-
     st.dataframe(latest[["name","weight","height","BMI","状态"]])
 
 # =====================
@@ -129,6 +145,5 @@ if len(df) > 0:
         result,
         columns=["姓名","初始体重","当前体重","减重(kg)"]
     )
-
     rank_df = rank_df.sort_values("减重(kg)", ascending=False)
     st.dataframe(rank_df)
