@@ -156,6 +156,7 @@ st.markdown("<h2 style='text-align: center; color: black;'>体重变化曲线</h
 if len(df) > 0:
     df["date"] = pd.to_datetime(df["date"])
 
+    # 绘制折线图，不再设置 "name" 标签以避免 undefined
     fig = px.line(
         df,
         x="date",
@@ -163,10 +164,10 @@ if len(df) > 0:
         color="name",
         markers=True,
         title=None,
-        labels={"date": "日期", "weight_jin": "体重 (斤)", "name": ""}  # 图例标题置空
+        labels={"date": "日期", "weight_jin": "体重 (斤)"}
     )
 
-    # 自定义悬停模板（避免出现 undefined）
+    # 自定义悬停模板
     fig.update_traces(
         hovertemplate="<b>%{fullData.name}</b><br>日期: %{x|%Y-%m-%d}<br>体重: %{y:.1f} 斤<extra></extra>"
     )
@@ -199,10 +200,10 @@ if len(df) > 0:
             xanchor="center",
             x=0.5,
             font=dict(size=14, color="black"),
-            title_text=""  # 确保图例标题为空
+            title_text=""  # 强制图例标题为空
         ),
         title_x=0.5,
-        plot_bgcolor="white",  # 背景白色
+        plot_bgcolor="white",
         paper_bgcolor="white"
     )
 
@@ -228,5 +229,4 @@ if len(df) > 0:
         columns=["姓名", "初始体重(斤)", "当前体重(斤)", "减重(斤)"]
     )
     rank_df = rank_df.sort_values("减重(斤)", ascending=False).reset_index(drop=True)
-
     st.dataframe(rank_df, hide_index=True, use_container_width=True)
