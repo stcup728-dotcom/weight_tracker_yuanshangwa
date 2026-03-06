@@ -155,59 +155,65 @@ st.markdown("<h2 style='text-align: center; color: black;'>体重变化曲线</h
 
 if len(df) > 0:
     df["date"] = pd.to_datetime(df["date"])
+    
+    # ===== 关键修复：过滤掉姓名为空的数据，避免 undefined 图例 =====
+    df = df[df['name'].notna() & (df['name'] != '')].copy()
+    
+    if len(df) == 0:
+        st.info("暂无有效数据")
+    else:
+        # 绘制折线图，不再设置 "name" 标签以避免 undefined
+        fig = px.line(
+            df,
+            x="date",
+            y="weight_jin",
+            color="name",
+            markers=True,
+            title=None,
+            labels={"date": "日期", "weight_jin": "体重 (斤)"}
+        )
 
-    # 绘制折线图，不再设置 "name" 标签以避免 undefined
-    fig = px.line(
-        df,
-        x="date",
-        y="weight_jin",
-        color="name",
-        markers=True,
-        title=None,
-        labels={"date": "日期", "weight_jin": "体重 (斤)"}
-    )
+        # 自定义悬停模板
+        fig.update_traces(
+            hovertemplate="<b>%{fullData.name}</b><br>日期: %{x|%Y-%m-%d}<br>体重: %{y:.1f} 斤<extra></extra>"
+        )
 
-    # 自定义悬停模板
-    fig.update_traces(
-        hovertemplate="<b>%{fullData.name}</b><br>日期: %{x|%Y-%m-%d}<br>体重: %{y:.1f} 斤<extra></extra>"
-    )
+        # 全局字体设置（黑色 + 大小）
+        fig.update_layout(
+            font=dict(
+                family="Arial, sans-serif",
+                size=14,
+                color="black"
+            ),
+            xaxis=dict(
+                title="日期",
+                titlefont=dict(size=16, color="black"),
+                tickfont=dict(size=14, color="black"),
+                rangeslider=dict(visible=True),
+                type="date",
+                tickformat="%Y-%m-%d"
+            ),
+            yaxis=dict(
+                title="体重 (斤)",
+                titlefont=dict(size=16, color="black"),
+                tickfont=dict(size=14, color="black")
+            ),
+            hovermode="x unified",
+            legend=dict(
+                orientation="h",
+                yanchor="bottom",
+                y=1.02,
+                xanchor="center",
+                x=0.5,
+                font=dict(size=14, color="black"),
+                title_text=""  # 强制图例标题为空
+            ),
+            title_x=0.5,
+            plot_bgcolor="white",
+            paper_bgcolor="white"
+        )
 
-    # 全局字体设置（黑色 + 大小）
-    fig.update_layout(
-        font=dict(
-            family="Arial, sans-serif",
-            size=14,
-            color="black"
-        ),
-        xaxis=dict(
-            title="日期",
-            titlefont=dict(size=16, color="black"),
-            tickfont=dict(size=14, color="black"),
-            rangeslider=dict(visible=True),
-            type="date",
-            tickformat="%Y-%m-%d"
-        ),
-        yaxis=dict(
-            title="体重 (斤)",
-            titlefont=dict(size=16, color="black"),
-            tickfont=dict(size=14, color="black")
-        ),
-        hovermode="x unified",
-        legend=dict(
-            orientation="h",
-            yanchor="bottom",
-            y=1.02,
-            xanchor="center",
-            x=0.5,
-            font=dict(size=14, color="black"),
-            title_text=""  # 强制图例标题为空
-        ),
-        title_x=0.5,
-        plot_bgcolor="white",
-        paper_bgcolor="white"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
+        st.plotly_chart(fig, use_container_width=True)
 
 # =====================
 # 减重排行榜
