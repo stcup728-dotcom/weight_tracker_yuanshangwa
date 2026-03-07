@@ -5,7 +5,7 @@ import os
 import pandas as pd
 
 # ----------------------
-# 页面样式：黑色字体、大小16、表格文字居中
+# 页面样式
 # ----------------------
 st.markdown(
     """
@@ -17,7 +17,6 @@ st.markdown(
     .stApp {
         background-color: white;
     }
-    /* 表格文字居中、黑色、字体大小 */
     .stDataFrame table {
         font-size: 16px !important;
         color: black !important;
@@ -46,7 +45,7 @@ DATA_FILE = "weight_data.csv"
 ALLOWED_NAMES = ["宋涛", "郭庆", "张博", "宋乐"]
 
 # ----------------------
-# 页面标题（居中）
+# 页面标题
 # ----------------------
 st.markdown("<h1 style='text-align:center;'>🏋️ 塬上娃减肥打卡系统</h1>", unsafe_allow_html=True)
 
@@ -60,6 +59,10 @@ if not os.path.exists(DATA_FILE):
     df.to_csv(DATA_FILE, index=False, encoding='gbk')
 
 df = pd.read_csv(DATA_FILE, encoding='gbk')
+
+# 日期统一转换（关键）
+if len(df) > 0:
+    df["date"] = pd.to_datetime(df["date"], format='mixed')
 
 # =====================
 # 今日打卡
@@ -83,17 +86,19 @@ with col4:
 submit = st.button("提交")
 
 if submit:
+
     if name not in ALLOWED_NAMES:
         st.error("❌ 你不在允许名单中")
+
     else:
+
         beijing_tz = timezone(timedelta(hours=8))
         now = datetime.now(beijing_tz)
         today = now.strftime("%Y-%m-%d")
 
-        # 读取现有数据（GBK编码）
         df = pd.read_csv(DATA_FILE, encoding='gbk')
 
-        # 删除当天已有的该用户记录（每人每天只保留最新一条）
+        # 删除当天重复记录
         df = df[~((df["name"] == name) & (df["date"] == today))]
 
         new = pd.DataFrame({
@@ -106,23 +111,29 @@ if submit:
 
         df = pd.concat([df, new], ignore_index=True)
 
-        # 保存数据（GBK编码）
         df.to_csv(DATA_FILE, index=False, encoding='gbk')
 
         st.success("✅ 打卡成功")
 
-# 重新读取最新数据
+# 重新读取
 df = pd.read_csv(DATA_FILE, encoding='gbk')
 
+if len(df) > 0:
+    df["date"] = pd.to_datetime(df["date"], format='mixed')
+
 # =====================
-# BMI体质指数分析
+# BMI分析（修复BUG版）
 # =====================
 st.markdown("<h2 style='text-align:center;'>BMI体质指数分析</h2>", unsafe_allow_html=True)
 
 if len(df) > 0:
-    latest = df.sort_values("date").groupby("name").tail(1)
+
+    # 每个人最新记录
+    latest = df.sort_values("date").groupby("name").tail(1).copy()
+
     latest["weight_kg"] = latest["weight_jin"] / 2
     latest["height_m"] = latest["height_cm"] / 100
+
     latest["BMI"] = latest["weight_kg"] / (latest["height_m"] ** 2)
 
     def bmi_status(b):
@@ -136,13 +147,27 @@ if len(df) > 0:
             return "肥胖"
 
     latest["状态"] = latest["BMI"].apply(bmi_status)
+
     latest["距离目标(斤)"] = latest["weight_jin"] - latest["goal_weight"]
 
     show = latest[[
-        "name", "weight_jin", "height_cm", "BMI", "状态", "goal_weight", "距离目标(斤)"
+        "name",
+        "weight_jin",
+        "height_cm",
+        "BMI",
+        "状态",
+        "goal_weight",
+        "距离目标(斤)"
     ]]
+
     show.columns = [
-        "姓名", "体重(斤)", "身高(cm)", "BMI", "状态", "目标体重", "距离目标"
+        "姓名",
+        "体重(斤)",
+        "身高(cm)",
+        "BMI",
+        "状态",
+        "目标体重",
+        "距离目标"
     ]
 
     st.dataframe(show, use_container_width=True, hide_index=True)
@@ -153,8 +178,6 @@ if len(df) > 0:
 st.markdown("<h2 style='text-align:center;'>体重变化曲线</h2>", unsafe_allow_html=True)
 
 if len(df) > 0:
-    # 使用 format='mixed' 自动识别多种日期格式
-    df["date"] = pd.to_datetime(df["date"], format='mixed')
 
     fig = px.line(
         df,
@@ -169,7 +192,6 @@ if len(df) > 0:
         }
     )
 
-    # 悬停提示日期格式为 2026/3/6
     fig.update_traces(
         hovertemplate="<b>%{fullData.name}</b><br>日期:%{x|%Y/%-m/%-d}<br>体重:%{y}斤<extra></extra>"
     )
@@ -179,54 +201,44 @@ if len(df) > 0:
         font=dict(color="black", size=14),
         xaxis=dict(
             title="日期",
-            titlefont=dict(size=16, color="black"),
-            tickfont=dict(size=14, color="black"),
             tickformat="%Y/%-m/%-d",
             rangeslider=dict(visible=True)
         ),
         yaxis=dict(
-            title="体重(斤)",
-            titlefont=dict(size=16, color="black"),
-            tickfont=dict(size=14, color="black")
+            title="体重(斤)"
         ),
         hovermode="x unified",
         plot_bgcolor="white",
         paper_bgcolor="white"
     )
 
-    st.plotly_chart(fig, use_container_width=True, key="weight_curve")
+    st.plotly_chart(fig, use_container_width=True)
 
 # =====================
-# 最近7天趋势（优化版：标题显示日期范围）
+# 最近7天趋势
 # =====================
 st.markdown("<h2 style='text-align:center;'>最近7天体重趋势</h2>", unsafe_allow_html=True)
 
 if len(df) > 0:
+
     last = df.copy()
-    last["date"] = pd.to_datetime(last["date"], format='mixed')
+
     end = last["date"].max()
     start = end - pd.Timedelta(days=7)
+
     last = last[last["date"] >= start]
 
-    if len(last) > 0:
-        # 手动拼接日期字符串，避免 strftime 的跨平台问题
-        start_str = f"{start.year}/{start.month}/{start.day}"
-        end_str = f"{end.year}/{end.month}/{end.day}"
-        title = f"最近7天体重趋势 ({start_str} 至 {end_str})"
-    else:
-        title = "最近7天体重趋势 (无数据)"
+    start_str = f"{start.year}/{start.month}/{start.day}"
+    end_str = f"{end.year}/{end.month}/{end.day}"
+
+    title = f"最近7天体重趋势 ({start_str} 至 {end_str})"
 
     fig2 = px.line(
         last,
         x="date",
         y="weight_jin",
         color="name",
-        markers=True,
-        labels={
-            "date": "日期",
-            "weight_jin": "体重(斤)",
-            "name": "姓名"
-        }
+        markers=True
     )
 
     fig2.update_traces(
@@ -234,27 +246,17 @@ if len(df) > 0:
     )
 
     fig2.update_layout(
-        title=dict(text=title, x=0.5, font=dict(size=18, color="black")),  # 动态标题居中
-        legend_title_text="",
-        font=dict(color="black", size=14),
-        xaxis=dict(
-            title="日期",
-            titlefont=dict(size=16, color="black"),
-            tickfont=dict(size=14, color="black"),
-            tickformat="%Y/%-m/%-d",
-            rangeslider=dict(visible=True)
-        ),
-        yaxis=dict(
-            title="体重(斤)",
-            titlefont=dict(size=16, color="black"),
-            tickfont=dict(size=14, color="black")
-        ),
+        title=dict(text=title, x=0.5),
         hovermode="x unified",
         plot_bgcolor="white",
-        paper_bgcolor="white"
+        paper_bgcolor="white",
+        xaxis=dict(
+            tickformat="%Y/%-m/%-d",
+            rangeslider=dict(visible=True)
+        )
     )
 
-    st.plotly_chart(fig2, use_container_width=True, key="last_7_days")
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =====================
 # 减重排行榜
@@ -262,24 +264,35 @@ if len(df) > 0:
 st.markdown("<h2 style='text-align:center;'>🏆 减重排行榜</h2>", unsafe_allow_html=True)
 
 if len(df) > 0:
+
     result = []
+
     for p in df["name"].unique():
+
         d = df[df["name"] == p].sort_values("date")
-        if len(d) >= 1:
-            start = d.iloc[0]["weight_jin"]
-            now = d.iloc[-1]["weight_jin"]
-            loss = start - now
-            result.append([p, start, now, loss])
+
+        start_w = d.iloc[0]["weight_jin"]
+        now_w = d.iloc[-1]["weight_jin"]
+
+        loss = start_w - now_w
+
+        result.append([p, start_w, now_w, loss])
 
     rank = pd.DataFrame(
         result,
-        columns=["姓名", "初始体重", "当前体重", "减重"]
+        columns=[
+            "姓名",
+            "初始体重",
+            "当前体重",
+            "减重"
+        ]
     )
 
     rank["减重率(%)"] = (rank["减重"] / rank["初始体重"] * 100).round(2)
-    rank = rank.sort_values("减重率(%)", ascending=False).reset_index(drop=True)
 
+    rank = rank.sort_values(
+        "减重率(%)",
+        ascending=False
+    ).reset_index(drop=True)
 
     st.dataframe(rank, use_container_width=True, hide_index=True)
-
-
