@@ -77,20 +77,22 @@ st.markdown("## 今日打卡")
 # 获取选定人的上一条打卡数据
 name = st.selectbox("选择姓名", ALLOWED_NAMES)
 
-# 查找该人的最后一次打卡数据
-last_record = df[df["name"] == name].sort_values("date", ascending=False).head(1)
+# 查找该人的前一天打卡数据
+yesterday = today - timedelta(days=1)
+last_record = df[(df["name"] == name) & (df["date"].dt.date == yesterday)].sort_values("date", ascending=False).head(1)
 
-# 如果有上一条打卡记录，则填充输入框
+# 如果有前一天的打卡记录，则填充输入框
 if len(last_record) > 0:
     last_weight = last_record["weight_jin"].values[0]
     last_height = last_record["height_cm"].values[0]
     last_goal_weight = last_record["goal_weight"].values[0]
 else:
+    # 默认值（首次打卡时使用）
     last_weight = 180.0  # 默认体重
     last_height = 175.0  # 默认身高
     last_goal_weight = 150.0  # 默认目标体重
 
-# 使用上一次的记录作为默认值
+# 使用上一次的记录作为默认值（如果没有前一天的数据，则使用系统默认值）
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
@@ -146,6 +148,129 @@ if len(df) > 0:
     else:
         st.warning("未打卡人员：")
         st.write("、".join(not_check))
+
+# =====================
+# BMI分析
+# =====================
+
+st.markdown("## BMI体质指数分析")
+
+if len(df) > 0:
+    latest = df.sort_values("date").groupby("name").tail(1).copy()
+
+    latest["weight_kg"] = latest["weight_jin"] / 2
+    latest["height_m"] = latest["height_cm"] / 100
+
+    latest["BMI"] = latest["weight_kg"] / (latest["height_m"] ** 2)
+
+    def bmi_state(b):
+        if b < 18.5:
+            return "偏瘦"
+        elif b < 23:
+            return "正常"
+        elif b < 25:
+            return "超重"
+        else:
+            return "肥胖"
+
+    latest["状态"] = latest["BMI"].apply(bmi_state)
+
+    latest["距离目标"] = latest["weight_jin"] - latest["goal_weight"]
+
+    show = latest[[
+        "name",
+        "weight_jin",
+        "height_cm",
+        "BMI",
+        "状态",
+        "goal_weight",
+        "距离目标"
+    ]]
+
+    show.columns = [
+        "姓名",
+        "体重(斤)",
+        "身高(cm)",
+        "BMI",
+        "状态",
+        "目标体重",
+        "距离目标(斤)"
+    ]
+
+    st.dataframe(show, use_container_width=True, hide_index=True)
+
+# =====================
+# 体重变化曲线
+# =====================
+
+st.markdown("## 体重变化曲线")
+
+if len(df) > 0:
+    fig = px.line(
+        df,
+        x="date",
+        y="weight_jin",
+        color="name",
+        markers=True,
+        labels={
+            "date": "日期",
+            "weight_jin": "体重(斤)",
+            "name": "姓名"
+        }
+    )
+
+    fig.update_layout(
+        legend_title_text="",
+        xaxis=dict(
+            title="日期",
+            tickformat="%Y/%-m/%-d",
+            rangeslider=dict(visible=True)
+        ),
+        yaxis=dict(title="体重(斤)"),
+        hovermode="x unified",
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
+
+    st.plotly_chart(fig, use_container_width=True)
+
+# =====================
+# 最近7天趋势
+# =====================
+
+st.markdown("## 最近7天体重趋势")
+
+if len(df) > 0:
+    end = df["date"].max()
+    start = end - pd.Timedelta(days=7)
+    last = df[df["date"] >= start]
+
+    fig2 = px.line(
+        last,
+        x="date",
+        y="weight_jin",
+        color="name",
+        markers=True,
+        labels={
+            "date": "日期",
+            "weight_jin": "体重(斤)",
+            "name": "姓名"
+        }
+    )
+
+    fig2.update_layout(
+        legend_title_text="",
+        xaxis=dict(
+            title="日期",
+            tickformat="%Y/%-m/%-d"
+        ),
+        yaxis=dict(title="体重(斤)"),
+        hovermode="x unified",
+        plot_bgcolor="white",
+        paper_bgcolor="white"
+    )
+
+    st.plotly_chart(fig2, use_container_width=True)
 
 # =====================
 # 减重排行榜
