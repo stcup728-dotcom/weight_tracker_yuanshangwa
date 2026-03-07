@@ -36,7 +36,7 @@ button{
 
 DATA_FILE = "weight_data.csv"
 
-ALLOWED_NAMES = ["宋涛","郭庆","张博","宋乐"]
+ALLOWED_NAMES = ["宋涛", "郭庆", "张博", "宋乐"]
 
 beijing_tz = timezone(timedelta(hours=8))
 today = datetime.now(beijing_tz).date()
@@ -75,7 +75,7 @@ st.markdown("# 🏋️ 塬上娃减肥打卡系统")
 st.markdown("## 今日打卡")
 
 # 获取选定人的上一条打卡数据
-name = st.selectbox("选择姓名", ALLOWED_NAMES)
+name = st.selectbox("选择姓名", ALLOWED_NAMES, key="name_selectbox")
 
 # 查找该人的最后一次打卡数据
 last_record = df[df["name"] == name].sort_values("date", ascending=False).head(1)
@@ -94,16 +94,16 @@ else:
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
-    name = st.selectbox("选择姓名", ALLOWED_NAMES)
+    name = st.selectbox("选择姓名", ALLOWED_NAMES, key="name_selectbox")
 
 with c2:
-    height_cm = st.number_input("身高(cm)", 160.0, 200.0, last_height)
+    height_cm = st.number_input("身高(cm)", 160.0, 200.0, last_height, key="height_cm")
 
 with c3:
-    weight_jin = st.number_input("体重(斤)", 100.0, 300.0, last_weight)
+    weight_jin = st.number_input("体重(斤)", 100.0, 300.0, last_weight, key="weight_jin")
 
 with c4:
-    goal_weight = st.number_input("目标体重(斤)", 100.0, 200.0, last_goal_weight)
+    goal_weight = st.number_input("目标体重(斤)", 100.0, 200.0, last_goal_weight, key="goal_weight")
 
 submit = st.button("提交")
 
@@ -117,13 +117,11 @@ if submit:
     df = df[~((df["name"] == name) & (df["date"] == today))]
 
     new = pd.DataFrame({
-
         "name": [name],
         "date": [today],
         "weight_jin": [weight_jin],
         "height_cm": [height_cm],
         "goal_weight": [goal_weight]
-
     })
 
     df = pd.concat([df, new], ignore_index=True)
@@ -303,65 +301,3 @@ if len(df) > 0:
     )
 
     st.plotly_chart(fig2, use_container_width=True)
-
-# =====================
-# 个人体重趋势
-# =====================
-
-st.markdown("## 👤 个人体重趋势")
-
-if len(df) > 0:
-
-    person = st.selectbox("选择查看成员", df["name"].unique())
-
-    p_df = df[df["name"] == person]
-
-    fig3 = px.line(
-
-        p_df,
-        x="date",
-        y="weight_jin",
-        markers=True,
-
-        labels={
-            "date": "日期",
-            "weight_jin": "体重(斤)"
-        }
-
-    )
-
-    fig3.update_layout(
-
-        title=f"{person}体重变化趋势",
-
-        xaxis=dict(
-            title="日期",
-            tickformat="%Y/%-m/%-d"
-        ),
-
-        yaxis=dict(
-            title="体重(斤)"
-        ),
-
-        plot_bgcolor="white",
-        paper_bgcolor="white"
-    )
-
-    st.plotly_chart(fig3, use_container_width=True)
-
-# =====================
-# 减重排行榜
-# =====================
-
-st.markdown("## 🏆 减重排行榜")
-
-if len(df) > 0:
-
-    result = []
-
-    for p in df["name"].unique():
-
-        d = df[df["name"] == p].sort_values("date")
-
-        start_w = d.iloc[0]["weight_jin"]
-        now_w = d.iloc
