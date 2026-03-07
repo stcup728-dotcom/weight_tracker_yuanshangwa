@@ -94,15 +94,12 @@ else:
 c1, c2, c3, c4 = st.columns(4)
 
 with c1:
-    name = st.selectbox("选择姓名", ALLOWED_NAMES, key="name_selectbox")
-
-with c2:
     height_cm = st.number_input("身高(cm)", 160.0, 200.0, last_height, key="height_cm")
 
-with c3:
+with c2:
     weight_jin = st.number_input("体重(斤)", 100.0, 300.0, last_weight, key="weight_jin")
 
-with c4:
+with c3:
     goal_weight = st.number_input("目标体重(斤)", 100.0, 200.0, last_goal_weight, key="goal_weight")
 
 submit = st.button("提交")
