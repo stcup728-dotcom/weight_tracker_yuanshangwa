@@ -148,124 +148,41 @@ if len(df) > 0:
         st.write("、".join(not_check))
 
 # =====================
-# BMI分析
+# 减重排行榜
 # =====================
 
-st.markdown("## BMI体质指数分析")
+st.markdown("## 🏆 减重排行榜")
 
 if len(df) > 0:
-    latest = df.sort_values("date").groupby("name").tail(1).copy()
+    result = []
 
-    latest["weight_kg"] = latest["weight_jin"] / 2
-    latest["height_m"] = latest["height_cm"] / 100
+    # 遍历所有人员，计算初始体重和当前体重
+    for p in df["name"].unique():
+        d = df[df["name"] == p].sort_values("date")
+        start_w = d.iloc[0]["weight_jin"]  # 初始体重
+        now_w = d.iloc[-1]["weight_jin"]   # 当前体重
 
-    latest["BMI"] = latest["weight_kg"] / (latest["height_m"] ** 2)
+        # 计算减重
+        loss = start_w - now_w
+        # 计算减重率
+        loss_rate = (loss / start_w) * 100 if start_w != 0 else 0
 
-    def bmi_state(b):
-        if b < 18.5:
-            return "偏瘦"
-        elif b < 23:
-            return "正常"
-        elif b < 25:
-            return "超重"
+        result.append([p, start_w, now_w, loss, round(loss_rate, 2)])
+
+    # 将结果转化为 DataFrame
+    rank = pd.DataFrame(result, columns=["姓名", "初始体重", "当前体重", "减重", "减重率(%)"])
+
+    # 按减重率降序排序
+    rank = rank.sort_values("减重率(%)", ascending=False).reset_index(drop=True)
+
+    # 给前三名添加奖牌
+    medals = ["🥇", "🥈", "🥉"]
+    rank.insert(0, "排名", "")
+
+    for i in range(len(rank)):
+        if i < 3:
+            rank.loc[i, "排名"] = medals[i]
         else:
-            return "肥胖"
+            rank.loc[i, "排名"] = i + 1
 
-    latest["状态"] = latest["BMI"].apply(bmi_state)
-
-    latest["距离目标"] = latest["weight_jin"] - latest["goal_weight"]
-
-    show = latest[[
-        "name",
-        "weight_jin",
-        "height_cm",
-        "BMI",
-        "状态",
-        "goal_weight",
-        "距离目标"
-    ]]
-
-    show.columns = [
-        "姓名",
-        "体重(斤)",
-        "身高(cm)",
-        "BMI",
-        "状态",
-        "目标体重",
-        "距离目标(斤)"
-    ]
-
-    st.dataframe(show, use_container_width=True, hide_index=True)
-
-# =====================
-# 体重变化曲线
-# =====================
-
-st.markdown("## 体重变化曲线")
-
-if len(df) > 0:
-    fig = px.line(
-        df,
-        x="date",
-        y="weight_jin",
-        color="name",
-        markers=True,
-        labels={
-            "date": "日期",
-            "weight_jin": "体重(斤)",
-            "name": "姓名"
-        }
-    )
-
-    fig.update_layout(
-        legend_title_text="",
-        xaxis=dict(
-            title="日期",
-            tickformat="%Y/%-m/%-d",
-            rangeslider=dict(visible=True)
-        ),
-        yaxis=dict(title="体重(斤)"),
-        hovermode="x unified",
-        plot_bgcolor="white",
-        paper_bgcolor="white"
-    )
-
-    st.plotly_chart(fig, use_container_width=True)
-
-# =====================
-# 最近7天趋势
-# =====================
-
-st.markdown("## 最近7天体重趋势")
-
-if len(df) > 0:
-    end = df["date"].max()
-    start = end - pd.Timedelta(days=7)
-    last = df[df["date"] >= start]
-
-    fig2 = px.line(
-        last,
-        x="date",
-        y="weight_jin",
-        color="name",
-        markers=True,
-        labels={
-            "date": "日期",
-            "weight_jin": "体重(斤)",
-            "name": "姓名"
-        }
-    )
-
-    fig2.update_layout(
-        legend_title_text="",
-        xaxis=dict(
-            title="日期",
-            tickformat="%Y/%-m/%-d"
-        ),
-        yaxis=dict(title="体重(斤)"),
-        hovermode="x unified",
-        plot_bgcolor="white",
-        paper_bgcolor="white"
-    )
-
-    st.plotly_chart(fig2, use_container_width=True)
+    st.dataframe(rank, use_container_width=True, hide_index=True)
